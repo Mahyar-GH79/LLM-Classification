@@ -11,7 +11,7 @@ from utils import preprocess_multiclass
 # Config
 MODEL_NAME = "bert-base-uncased"
 EPOCHS = 30
-BATCH_SIZE = 6
+BATCH_SIZE = 4
 
 # Load and preprocess data
 zf = zipfile.ZipFile('dataset/train.csv.zip')
@@ -24,8 +24,12 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 train_ds = LLMTripleDataset(train_df, tokenizer)
 val_ds = LLMTripleDataset(val_df, tokenizer)
 
-# Model
+# Model 
 model = load_model(MODEL_NAME, num_labels=3)
+
+# Freeze Bert and finetune the MLP head
+for param in model.bert.parameters():
+    param.requires_grad = False
 
 # Training Arguments
 args = TrainingArguments(
