@@ -1,35 +1,30 @@
-from transformers import Trainer, TrainingArguments, AutoTokenizer
-from sklearn.model_selection import train_test_split
-import pandas as pd
-import evaluate
-import torch
 import zipfile
+import pandas as pd
+from transformers import Trainer, TrainingArguments, AutoTokenizer
 from dataset import LLMTripleDataset
-from model import load_model
-from utils import preprocess_multiclass
+from models import CausalLMClassifier
+from utils import preprocess_multiclass, compute_metrics
+from torch.utils.data import random_split
+
 
 # Config
-MODEL_NAME = "bert-base-uncased"
-EPOCHS = 30
-BATCH_SIZE = 4
+MODEL_NAME = "tiiuae/falcon-rw-1b"
+EPOCHS = 4
+BATCH_SIZE = 2
 
 # Load and preprocess data
 zf = zipfile.ZipFile('dataset/train.csv.zip')
 df = pd.read_csv(zf.open('train.csv'))
 df = preprocess_multiclass(df)
-train_df, val_df = train_test_split(df, test_size=0.1, random_state=42)
 
 # Tokenizer and datasets
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-train_ds = LLMTripleDataset(train_df, tokenizer)
-val_ds = LLMTripleDataset(val_df, tokenizer)
+tokenizer.pad_token = tokenizer.eos_token
+ds = LLMTripleDataset(df=df, tokenizer=tokenizer)
+train_ds, val_ds = random_split(ds, [0.8, 0.2])
 
 # Model 
-model = load_model(MODEL_NAME, num_labels=3)
-
-# Freeze Bert and finetune the MLP head
-for param in model.bert.parameters():
-    param.requires_grad = False
+model = CausalLMClassifier(lm_name=MODEL_NAME, num_classes=3)
 
 # Training Arguments
 args = TrainingArguments(
@@ -43,15 +38,10 @@ args = TrainingArguments(
     load_best_model_at_end=True,
     logging_dir="./logs",
     logging_steps=50,
-    report_to="tensorboard"
+    save_safetensors=False,
+    report_to="tensorboard",
+    fp16=True
 )
-
-# Metrics
-accuracy = evaluate.load("accuracy")
-def compute_metrics(eval_pred):
-    logits, labels = eval_pred
-    preds = torch.argmax(torch.tensor(logits), dim=1)
-    return accuracy.compute(predictions=preds, references=labels)
 
 # Trainer
 trainer = Trainer(
