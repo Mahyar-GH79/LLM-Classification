@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 
+
 class LLMTripleDataset(Dataset):
     def __init__(self, df, tokenizer, max_length=512, is_test=False):
         self.df = df
@@ -12,19 +13,15 @@ class LLMTripleDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        prompt = row['prompt']
-        res_a = row['response_a']
-        res_b = row['response_b']
-        text_b = f"Response A: {res_a} Response B: {res_b}"
-        encoded = self.tokenizer(
-            prompt,
-            text_b,
-            truncation=True,
-            padding='max_length',
+        text = f"Prompt: {row['prompt']}, A: {row['response_a']}, B: {row['response_b']}"
+        encoding = self.tokenizer(
+            text,
             max_length=self.max_length,
-            return_tensors='pt'
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt"
         )
-        item = {k: v.squeeze(0) for k, v in encoded.items()}
+        item = {k: v.squeeze(0) for k, v in encoding.items()}
 
         if not self.is_test:
             item['labels'] = int(row['label'])

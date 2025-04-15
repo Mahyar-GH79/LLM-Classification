@@ -1,4 +1,6 @@
 import json
+import evaluate
+import numpy as np
 import pandas as pd
 
 def safe_parse(json_str):
@@ -13,7 +15,7 @@ def safe_parse(json_str):
     except Exception as e:
         return None
 
-def preprocess_multiclass(df):
+def preprocess_multiclass(df: pd.DataFrame):
     # Apply safe parsing
     df['prompt'] = df['prompt'].apply(safe_parse)
     df['response_a'] = df['response_a'].apply(safe_parse)
@@ -33,3 +35,10 @@ def preprocess_multiclass(df):
 
     df['label'] = df.apply(label_fn, axis=1)
     return df[df['label'] != -1].reset_index(drop=True)
+
+
+def compute_metrics(eval_pred):
+    accuracy = evaluate.load("accuracy")
+    logits, labels = eval_pred
+    preds = np.argmax(logits, axis=1)
+    return accuracy.compute(predictions=preds, references=labels)
