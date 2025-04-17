@@ -20,14 +20,14 @@ class CausalLMClassifier(nn.Module):
             quantization_config=bnb_config
         )
 
-        # ❄️ Freeze all backbone parameters
+        # Freeze all backbone parameters
         for param in self.backbone.parameters():
             param.requires_grad = False
 
         hidden_size = self.backbone.config.hidden_size
-        dtype = self.backbone.dtype  # should be float16
+        dtype = self.backbone.dtype  
 
-        # 🔍 Trainable classifier head
+        #  Trainable classifier head
         self.classifier = nn.Sequential(
             nn.Linear(hidden_size, hidden_size, dtype=dtype),
             nn.ReLU(),
@@ -45,7 +45,7 @@ class CausalLMClassifier(nn.Module):
         last_hidden = outputs.hidden_states[-1]  # [B, T, D]
         device = last_hidden.device
 
-        # 📍 Get last token for each sequence
+        # Get last token for each sequence
         last_token_index = attention_mask.sum(dim=1) - 1
         pooled = last_hidden[
             torch.arange(last_hidden.shape[0], device=device),
