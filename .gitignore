@@ -17,5 +17,4 @@ env/
 
 .mypy_cache/
 pytest_cache/
-output_model
-*.ipynb
+*.ipynboutput_model/pytorch_model.bin
