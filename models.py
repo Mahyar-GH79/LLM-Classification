@@ -19,7 +19,7 @@ class CausalLMClassifier(nn.Module):
             device_map="auto",
             quantization_config=bnb_config
         )
-
+   
         # Freeze all backbone parameters
         for param in self.backbone.parameters():
             param.requires_grad = False
@@ -29,10 +29,10 @@ class CausalLMClassifier(nn.Module):
 
         #  Trainable classifier head
         self.classifier = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size, dtype=dtype),
+            nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(hidden_size, num_classes, dtype=dtype)
+            nn.Linear(hidden_size, num_classes)
         )
 
     def forward(self, input_ids, attention_mask=None, labels=None):
@@ -45,17 +45,18 @@ class CausalLMClassifier(nn.Module):
         last_hidden = outputs.hidden_states[-1]  # [B, T, D]
         device = last_hidden.device
 
-        # Get last token for each sequence
+       # Get last token for each sequence
         last_token_index = attention_mask.sum(dim=1) - 1
         pooled = last_hidden[
             torch.arange(last_hidden.shape[0], device=device),
             last_token_index,
             :
         ]  # [B, D]
-
+        
+        pooled = pooled.to(dtype=self.classifier[0].weight.dtype)
         logits = self.classifier(pooled)
+
         loss = None
         if labels is not None:
             loss = nn.CrossEntropyLoss()(logits, labels)
-
         return {"loss": loss, "logits": logits}
