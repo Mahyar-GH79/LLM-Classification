@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 
 
 class LLMTripleDataset(Dataset):
-    def __init__(self, df, tokenizer, max_length=512, is_test=False):
+    def __init__(self, df, tokenizer, max_length=1024, is_test=False):
         self.df = df
         self.tokenizer = tokenizer
         self.max_length = max_length
@@ -13,7 +13,13 @@ class LLMTripleDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        text = f"Prompt: {row['prompt']}, A: {row['response_a']}, B: {row['response_b']}"
+        text = (
+            f"Prompt: {row['prompt']} "
+            f"A and B are responses to the question asked in the prompt. "
+            f"A: {row['response_a']} "
+            f"B: {row['response_b']}"
+                )
+
         encoding = self.tokenizer(
             text,
             max_length=self.max_length,
